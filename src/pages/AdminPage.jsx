@@ -481,7 +481,7 @@ const AdminPage = () => {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(); }, []);
 
   const handleAssign = async (vehicleId, orderId) => {
     try {

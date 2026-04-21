@@ -6,7 +6,6 @@ import {
 } from "../services/bunkService";
 import { useAuth } from "../context/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { formatCurrency } from "../utils/formatCurrency";
 import toast from "react-hot-toast";
 
 // ─── Add Station Form ────────────────────────────────────────────────────────
@@ -343,7 +342,7 @@ const InventoryPage = () => {
     }
   }, [user]);
 
-  useEffect(() => { loadBunks(); }, [loadBunks]);
+  useEffect(() => { loadBunks(); }, [user]);
 
   const handleSave = async (bunkId, form) => {
     await updateBunkInventory(bunkId, form);

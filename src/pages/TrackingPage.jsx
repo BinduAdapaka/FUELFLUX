@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   MapContainer, TileLayer, Polyline, Marker, Popup, useMap,
@@ -41,7 +41,9 @@ const FitBounds = ({ points }) => {
     try {
       const bounds = L.latLngBounds(points);
       if (bounds.isValid()) map.fitBounds(bounds, { padding: [60, 60] });
-    } catch (_) {}
+    } catch {
+      // Ignore invalid bounds
+    }
   }, [points, map]);
   return null;
 };
@@ -110,7 +112,7 @@ const TrackingPage = () => {
     getBunkById(order.bunkId).then(setBunk).catch(() => {
       if (order.bunkLocation) setBunk({ location: order.bunkLocation, name: order.bunkName });
     });
-  }, [order?.bunkId]);
+  }, [order?.bunkId, order?.bunkLocation, order?.bunkName]);
 
   // Subscribe to vehicle
   useEffect(() => {
@@ -132,6 +134,9 @@ const TrackingPage = () => {
 
   const routeOrigin = vehiclePos || bunkPos;
 
+  const routeOriginStr = useMemo(() => JSON.stringify(routeOrigin), [routeOrigin]);
+  const deliveryPosStr = useMemo(() => JSON.stringify(deliveryPos), [deliveryPos]);
+
   // Fetch live road route whenever origin/dest are ready
   const loadRoute = useCallback(async () => {
     setRouteLoading(true);
@@ -147,7 +152,7 @@ const TrackingPage = () => {
     } finally {
       setRouteLoading(false);
     }
-  }, [JSON.stringify(routeOrigin), JSON.stringify(deliveryPos)]);
+  }, [routeOrigin, deliveryPos, routeOriginStr, deliveryPosStr]);
 
   useEffect(() => {
     if (!bunk) return;

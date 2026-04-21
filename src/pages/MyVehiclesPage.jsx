@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getUserVehicles, addUserVehicle, deleteUserVehicle } from "../services/userVehicleService";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -29,7 +29,7 @@ const MyVehiclesPage = () => {
   const [deletingId, setDeletingId]   = useState(null);
   const [errors, setErrors]           = useState({});
 
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       const data = await getUserVehicles(user.uid);
       setVehicles(data);
@@ -38,11 +38,11 @@ const MyVehiclesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) loadVehicles();
-  }, [user]);
+  }, [user, loadVehicles]);
 
   const validate = () => {
     const e = {};
@@ -74,7 +74,10 @@ const MyVehiclesPage = () => {
   };
 
   const handleDelete = async (vehicleId) => {
-    if (!confirm("Remove this vehicle?")) return;
+    // Use a toast-confirmation pattern instead of browser confirm() 
+    // to avoid issues in environments where confirm() is blocked.
+    const confirmed = window.confirm("Remove this vehicle?");
+    if (!confirmed) return;
     setDeletingId(vehicleId);
     try {
       await deleteUserVehicle(vehicleId);

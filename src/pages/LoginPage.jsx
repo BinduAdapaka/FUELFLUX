@@ -50,7 +50,7 @@ const LoginPage = () => {
       await login(account.email, account.password);
       toast.success(`Logged in as ${account.label} 🎉`);
       navigate(account.redirect);
-    } catch (err) {
+    } catch {
       toast.error(`Demo account not set up yet. Register with ${account.email} as ${account.label} first.`);
     } finally {
       setDemoLoading(null);

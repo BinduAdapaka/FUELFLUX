@@ -39,6 +39,7 @@ const Navbar = () => {
   }, []);
 
   // Close on route change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   // Build nav links based on role

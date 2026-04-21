@@ -390,7 +390,7 @@ const StationInfoPage = () => {
     }
   }, [user]);
 
-  useEffect(() => { loadBunks(); }, [loadBunks]);
+  useEffect(() => { loadBunks(); }, [user]);
 
   const handleSave = async (bunkId, form) => {
     await updateBunkInfo(bunkId, form);

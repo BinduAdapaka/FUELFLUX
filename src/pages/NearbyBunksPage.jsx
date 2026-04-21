@@ -73,7 +73,7 @@ const NearbyBunksPage = () => {
     );
   }, []);
 
-  useEffect(() => { acquireLocation(); }, [acquireLocation]);
+  useEffect(() => { acquireLocation(); }, []);
 
   // ── Fetch bunks ───────────────────────────────────────────────────────────
   useEffect(() => {

@@ -1,5 +1,7 @@
 
 
+/* eslint-disable no-undef */
+
 const admin = require("firebase-admin");
 const serviceAccount = require("./serviceAccount.json");
 

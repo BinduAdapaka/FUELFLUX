@@ -30,6 +30,7 @@ const QuickNav = () => {
   }, []);
 
   // Close on route change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
   const currentRole = user ? (role ?? "user") : null;
