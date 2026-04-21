@@ -1,15 +1,4 @@
-/**
- * One-time seed script to populate Firestore with sample petrol bunk data.
- * 
- * USAGE:
- *   1. Install firebase-admin: npm install firebase-admin --save-dev
- *   2. Download your Firebase service account JSON from:
- *      Firebase Console → Project Settings → Service Accounts → Generate new private key
- *   3. Save it as scripts/serviceAccount.json
- *   4. Run: node scripts/seedFirestore.js
- * 
- * ⚠️  Run only ONCE — it adds 5 bunks + 2 vehicles to Firestore.
- */
+
 
 const admin = require("firebase-admin");
 const serviceAccount = require("./serviceAccount.json");
