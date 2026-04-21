@@ -121,23 +121,33 @@ const TrackingPage = () => {
     return unsub;
   }, [order?.vehicleId]);
 
-  // Build coordinate points
-  const bunkPos = bunk?.location
-    ? [bunk.location.lat, bunk.location.lng]
-    : [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng];
+  // ── Stable memoised coordinate arrays ────────────────────────────────────
+  // Primitive seeds keep useMemo stable: only recompute when the actual
+  // lat/lng values change, NOT on every render (which caused infinite OSRM calls).
+  const bunkLat = bunk?.location?.lat ?? DEFAULT_CENTER.lat;
+  const bunkLng = bunk?.location?.lng ?? DEFAULT_CENTER.lng;
+  const bunkPos = useMemo(() => [bunkLat, bunkLng], [bunkLat, bunkLng]);
 
-  const vehiclePos = vehicle?.currentLocation
-    ? [vehicle.currentLocation.lat, vehicle.currentLocation.lng]
-    : null;
+  const vehLat = vehicle?.currentLocation?.lat ?? null;
+  const vehLng = vehicle?.currentLocation?.lng ?? null;
+  const vehiclePos = useMemo(
+    () => (vehLat !== null && vehLng !== null ? [vehLat, vehLng] : null),
+    [vehLat, vehLng]
+  );
 
-  const deliveryPos = userLocation || [bunkPos[0] + 0.018, bunkPos[1] + 0.015];
+  const usrLat = userLocation?.[0] ?? null;
+  const usrLng = userLocation?.[1] ?? null;
+  const deliveryPos = useMemo(
+    () => (usrLat !== null ? [usrLat, usrLng] : [bunkLat + 0.018, bunkLng + 0.015]),
+    [usrLat, usrLng, bunkLat, bunkLng]
+  );
 
-  const routeOrigin = vehiclePos || bunkPos;
+  const routeOrigin = useMemo(
+    () => vehiclePos ?? bunkPos,
+    [vehiclePos, bunkPos]
+  );
 
-  const routeOriginStr = useMemo(() => JSON.stringify(routeOrigin), [routeOrigin]);
-  const deliveryPosStr = useMemo(() => JSON.stringify(deliveryPos), [deliveryPos]);
-
-  // Fetch live road route whenever origin/dest are ready
+  // Fetch live road route — only fires when coordinates actually change
   const loadRoute = useCallback(async () => {
     setRouteLoading(true);
     setRouteError(false);
@@ -145,14 +155,14 @@ const TrackingPage = () => {
       const result = await fetchRoute(routeOrigin, deliveryPos);
       setRoutePoints(result.polyline);
       setRouteMeta({ distance: result.distance, duration: result.duration, steps: result.steps });
-    } catch {
+    } catch (err) {
+      console.warn("OSRM route fetch failed, falling back to straight line:", err);
       setRouteError(true);
-      // Fall back to straight line
       setRoutePoints([routeOrigin, deliveryPos]);
     } finally {
       setRouteLoading(false);
     }
-  }, [routeOrigin, deliveryPos, routeOriginStr, deliveryPosStr]);
+  }, [routeOrigin, deliveryPos]);
 
   useEffect(() => {
     if (!bunk) return;
