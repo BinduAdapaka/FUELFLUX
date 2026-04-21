@@ -76,6 +76,29 @@ const MapView = ({ onOrderClick }) => {
           userLocation={userLocation}
         />
       ))}
+
+      {/* Overlay shown when no stations have been registered yet */}
+      {bunks.length === 0 && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            background: "rgba(13,13,13,0.88)", backdropFilter: "blur(8px)",
+            border: "1px solid #2a2a2a", borderRadius: 16,
+            padding: "24px 32px", textAlign: "center", maxWidth: 340,
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>⛽</div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 6 }}>
+              No stations registered yet
+            </h3>
+            <p style={{ fontSize: 13, color: "#a0a0a0", lineHeight: 1.5 }}>
+              Station managers need to add their bunk via the <strong style={{ color: "#FF9800" }}>Inventory</strong> page. Stations will appear here once added.
+            </p>
+          </div>
+        </div>
+      )}
     </MapContainer>
   );
 };

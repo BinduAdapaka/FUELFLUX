@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from "../utils/formatCurrency";
 import { calculateDistance, formatDistance } from "../utils/calculateDistance";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 
 
@@ -29,6 +29,7 @@ const STEPS = ["Select Bunk", "Fuel & Delivery", "Payment"];
 const OrderFuelPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Data
   const [bunks, setBunks] = useState([]);
@@ -56,6 +57,7 @@ const OrderFuelPage = () => {
   // Search/filter
   const [search, setSearch] = useState("");
   const [fuelFilter, setFuelFilter] = useState("All");
+  const [radiusKm, setRadiusKm] = useState(25);
 
   // Get geolocation
   useEffect(() => {
@@ -68,10 +70,19 @@ const OrderFuelPage = () => {
   // Fetch bunks
   useEffect(() => {
     getAllBunks()
-      .then(setBunks)
+      .then((data) => {
+        setBunks(data);
+        // If navigated from Nearby page with a pre-selected bunk, auto-select it
+        const preSelected = location.state?.selectedBunk;
+        if (preSelected) {
+          const match = data.find((b) => b.id === preSelected.id) || preSelected;
+          setSelectedBunk(match);
+          window.history.replaceState({}, document.title); // clear state so refresh doesn't re-select
+        }
+      })
       .catch(console.error)
       .finally(() => setLoadingBunks(false));
-  }, []);
+  }, [location.state]);
 
   // Fetch user's registered vehicles
   useEffect(() => {
@@ -104,6 +115,14 @@ const OrderFuelPage = () => {
       if (fuelFilter === "Petrol") return b.petrolStock > 0;
       if (fuelFilter === "Diesel") return b.dieselStock > 0;
       return true;
+    })
+    .filter((b) => {
+      if (!userLocation) return true; // no GPS → show all
+      const dist = calculateDistance(
+        userLocation.lat, userLocation.lng,
+        b.location.lat, b.location.lng
+      );
+      return dist <= radiusKm;
     })
     .sort((a, b2) => {
       if (!userLocation) return 0;
@@ -291,14 +310,49 @@ const OrderFuelPage = () => {
                 </div>
               </div>
 
+              {/* ── Radius slider ── */}
+              <div className="ofp-radius-row">
+                <div className="ofp-radius-label">
+                  <span>📍 Nearby Range</span>
+                  <span className="ofp-radius-value">
+                    {radiusKm === 25 ? "25 km (max)" : `${radiusKm} km`}
+                    {userLocation
+                      ? <span className="ofp-radius-count"> · {filteredBunks.length} station{filteredBunks.length !== 1 ? "s" : ""}</span>
+                      : <span className="ofp-radius-hint"> · Enable GPS for distance filtering</span>}
+                  </span>
+                </div>
+                <div className="ofp-slider-wrap">
+                  <span className="ofp-slider-min">0 km</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="25"
+                    step="1"
+                    value={radiusKm}
+                    onChange={(e) => setRadiusKm(Number(e.target.value))}
+                    className="ofp-radius-slider"
+                    id="radius-slider"
+                    style={{
+                      background: `linear-gradient(to right, #FF9800 0%, #FF9800 ${((radiusKm - 1) / 24) * 100}%, #2a2a2a ${((radiusKm - 1) / 24) * 100}%, #2a2a2a 100%)`
+                    }}
+                  />
+                  <span className="ofp-slider-max">25 km</span>
+                </div>
+              </div>
+
               {loadingBunks ? (
                 <div className="centered" style={{ height: 240 }}>
                   <LoadingSpinner />
                 </div>
               ) : filteredBunks.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">🔍</div>
-                  <h3>No bunks found</h3>
+                  <div className="empty-icon">{bunks.length === 0 ? "⛽" : "🔍"}</div>
+                  <h3>{bunks.length === 0 ? "No stations registered yet" : "No bunks match your search"}</h3>
+                  <p style={{ marginTop: 8, fontSize: 13, color: "var(--text2)" }}>
+                    {bunks.length === 0
+                      ? "Station managers need to add their bunk via the Inventory page before orders can be placed."
+                      : "Try a different search term or fuel filter."}
+                  </p>
                 </div>
               ) : (
                 <div className="bunk-select-grid">

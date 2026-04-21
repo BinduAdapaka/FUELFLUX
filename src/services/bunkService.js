@@ -8,8 +8,35 @@ import {
   addDoc,
   query,
   where,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+
+/**
+ * Register a brand-new petrol bunk for a manager.
+ * The bunk will appear immediately on the nearby-bunks map for all users.
+ */
+export const registerBunk = async (managerId, {
+  name, address, phone, openTime, closeTime,
+  lat, lng,
+  petrolStock, dieselStock, pricePetrol, priceDiesel,
+}) => {
+  const ref = await addDoc(collection(db, "petrolBunks"), {
+    managerId,
+    name:        name.trim(),
+    address:     address?.trim()   ?? "",
+    phone:       phone?.trim()     ?? "",
+    openTime:    openTime          ?? "06:00",
+    closeTime:   closeTime         ?? "22:00",
+    location:    { lat: Number(lat), lng: Number(lng) },
+    petrolStock: Number(petrolStock) || 500,
+    dieselStock: Number(dieselStock) || 500,
+    pricePetrol: Number(pricePetrol) || 102.0,
+    priceDiesel: Number(priceDiesel) || 89.0,
+    createdAt:   serverTimestamp(),
+  });
+  return ref.id;
+};
 
 const BUNKS_COLLECTION = "petrolBunks";
 
@@ -59,32 +86,18 @@ const SAMPLE_BUNKS = [
 
 /**
  * Fetch all petrol bunks from Firestore.
- * - If the collection is empty (first run), seeds sample data automatically.
- * - If Firestore is unreachable or rules block the read, falls back to
- *   the built-in SAMPLE_BUNKS so the UI is never blank.
+ * Only returns bunks that were registered by a manager (have a managerId).
+ * Old seed/sample data without a managerId is excluded.
  */
 export const getAllBunks = async () => {
   try {
     const snapshot = await getDocs(collection(db, BUNKS_COLLECTION));
-
-    if (snapshot.empty) {
-      console.info("Firestore petrolBunks is empty — seeding sample data…");
-      try {
-        await seedSampleBunks();
-        // Re-fetch after seeding
-        const fresh = await getDocs(collection(db, BUNKS_COLLECTION));
-        return fresh.docs.map((d) => ({ id: d.id, ...d.data() }));
-      } catch (seedErr) {
-        console.warn("Could not seed Firestore (check rules). Using local sample data.", seedErr);
-        return SAMPLE_BUNKS.map((b, i) => ({ id: `local-${i}`, ...b }));
-      }
-    }
-
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((b) => !!b.managerId); // only real manager-registered bunks
   } catch (err) {
-    // Permission denied or network error — show local sample data so UI works
-    console.warn("Failed to load bunks from Firestore. Using local sample data.", err.message);
-    return SAMPLE_BUNKS.map((b, i) => ({ id: `local-${i}`, ...b }));
+    console.warn("Failed to load bunks from Firestore:", err.message);
+    return [];
   }
 };
 
@@ -131,17 +144,15 @@ export const getAllBunksAdmin = async () => {
 };
 
 /**
- * Fetch only the bunks assigned to a specific manager (by their UID).
- * Falls back to all bunks if none are assigned yet (for demo/seed data).
+ * Fetch only the bunks registered by a specific manager (by their UID).
+ * Returns an empty array if this manager has not added any stations yet.
  */
 export const getBunksByManager = async (managerUid) => {
-  const q = query(collection(db, BUNKS_COLLECTION), where("managerId", "==", managerUid));
+  const q = query(
+    collection(db, BUNKS_COLLECTION),
+    where("managerId", "==", managerUid)
+  );
   const snapshot = await getDocs(q);
-  if (snapshot.empty) {
-    // Fallback: show all bunks (for demo data that has no managerId set yet)
-    const all = await getDocs(collection(db, BUNKS_COLLECTION));
-    return all.docs.map((d) => ({ id: d.id, ...d.data() }));
-  }
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
 

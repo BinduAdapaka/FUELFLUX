@@ -43,16 +43,18 @@ const Navbar = () => {
 
   // Build nav links based on role
   const navLinks = [
-    { to: "/",          label: "Map View",       icon: "🗺️", show: !user || role === "user" },
-    { to: "/order",     label: "Order Fuel",     icon: "⛽", show: !!user && role === "user" },
-    { to: "/orders",    label: "My Orders",      icon: "📋", show: !!user && role === "user" },
-    { to: "/vehicles",  label: "My Vehicles",    icon: "🚗", show: !!user && role === "user" },
-    { to: "/inventory", label: "Fuel Inventory", icon: "📦", show: role === "manager" },
-    { to: "/station",   label: "Station Info",   icon: "🏪", show: role === "manager" },
-    { to: "/admin",     label: "Dashboard",      icon: "⚙️", show: isAdmin },
-    { to: "/login",     label: "Login",          icon: "🔐", show: !user },
-    { to: "/register",  label: "Sign Up",        icon: "✨", show: !user },
+    { to: "/",        label: "Map View",       icon: "🗺️",  show: !user || role === "user" },
+    { to: "/nearby",  label: "Nearby Bunks",   icon: "📍",  show: !!user && role === "user" },
+    { to: "/order",   label: "Order Fuel",     icon: "⛽",  show: !!user && role === "user" },
+    { to: "/orders",  label: "My Orders",      icon: "📋",  show: !!user && role === "user" },
+    { to: "/vehicles",label: "My Vehicles",    icon: "🚗",  show: !!user && role === "user" },
+    { to: "/inventory",label:"Fuel Inventory", icon: "📦",  show: role === "manager" },
+    { to: "/station", label: "Station Info",   icon: "🏪",  show: role === "manager" },
+    { to: "/admin",   label: "Dashboard",      icon: "⚙️",  show: isAdmin },
+    { to: "/login",   label: "Login",          icon: "🔐",  show: !user },
+    { to: "/register",label: "Sign Up",        icon: "✨",  show: !user },
   ].filter((l) => l.show);
+
 
   const badge = user ? ROLE_BADGE[role] ?? ROLE_BADGE.user : null;
 

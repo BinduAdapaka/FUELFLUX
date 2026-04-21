@@ -15,6 +15,7 @@ import OrderFuelPage from "./pages/OrderFuelPage";
 import MyVehiclesPage from "./pages/MyVehiclesPage";
 import InventoryPage from "./pages/InventoryPage";
 import StationInfoPage from "./pages/StationInfoPage";
+import NearbyBunksPage from "./pages/NearbyBunksPage";
 import "./index.css";
 
 function App() {
@@ -81,6 +82,14 @@ function App() {
                 element={
                   <ProtectedRoute managerOnly>
                     <StationInfoPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/nearby"
+                element={
+                  <ProtectedRoute>
+                    <NearbyBunksPage />
                   </ProtectedRoute>
                 }
               />
