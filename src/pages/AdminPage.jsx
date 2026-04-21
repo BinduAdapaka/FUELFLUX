@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getAllOrders, updateOrderStatus } from "../services/orderService";
-import { getAllVehicles, assignVehicle, addVehicle, freeVehicle } from "../services/vehicleService";
+import { getAllVehicles, assignVehicle, addVehicle, freeVehicle, updateVehicleLocation } from "../services/vehicleService";
 import { setUserRole } from "../services/authService";
 import { db } from "../firebase/firebaseConfig";
 import { doc, updateDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
@@ -323,9 +323,10 @@ const OrdersTab = ({ orders, vehicles, onAssign, onFree, onStatusChange }) => {
 
 // ── DELIVERY BOYS TAB ─────────────────────────────────────────────────────────
 const DeliveryTab = ({ vehicles, orders, onAssign, onFree, onAdd }) => {
-  const [driverName, setDriverName] = useState("");
-  const [adding, setAdding]         = useState(false);
-  const [assignMap, setAssignMap]   = useState({});
+  const [driverName,   setDriverName]   = useState("");
+  const [adding,       setAdding]       = useState(false);
+  const [assignMap,    setAssignMap]    = useState({});
+  const [simulatingId, setSimulatingId] = useState(null); // vehicleId being simulated
   const pendingOrders = orders.filter(o => o.status === "Pending");
 
   const handleAdd = async (e) => {
@@ -334,6 +335,44 @@ const DeliveryTab = ({ vehicles, orders, onAssign, onFree, onAdd }) => {
     setAdding(true);
     try { await onAdd(driverName); setDriverName(""); }
     finally { setAdding(false); }
+  };
+
+  /**
+   * Simulate the truck moving from startPos → endPos over `steps` intervals.
+   * Each step writes the new lat/lng to Firestore → TrackingPage onSnapshot
+   * picks it up instantly and moves the truck marker live on the map.
+   */
+  const simulateTrip = async (vehicleId, startPos, endPos, steps = 25, intervalMs = 1200) => {
+    setSimulatingId(vehicleId);
+    try {
+      for (let i = 1; i <= steps; i++) {
+        const t   = i / steps;
+        const lat = startPos[0] + (endPos[0] - startPos[0]) * t;
+        const lng = startPos[1] + (endPos[1] - startPos[1]) * t;
+        await updateVehicleLocation(vehicleId, lat, lng);
+        if (i < steps) await new Promise(r => setTimeout(r, intervalMs));
+      }
+      toast.success("🚚 Simulation complete — truck reached delivery point!");
+    } catch (err) {
+      toast.error("Simulation failed: " + err.message);
+    } finally {
+      setSimulatingId(null);
+    }
+  };
+
+  const handleSimulate = (v) => {
+    const assignedOrder = orders.find(o => o.id === v.assignedOrderId);
+    // Start point: vehicle current location or bunk location
+    const bunkLoc = assignedOrder?.bunkLocation;
+    const startPos = v.currentLocation
+      ? [v.currentLocation.lat, v.currentLocation.lng]
+      : bunkLoc ? [bunkLoc.lat, bunkLoc.lng] : [17.385, 78.4867];
+    // End point: delivery GPS stored in the order, or offset from bunk
+    const dlv = assignedOrder?.deliveryLocation;
+    const endPos = dlv
+      ? [dlv.lat, dlv.lng]
+      : [startPos[0] + 0.018, startPos[1] + 0.015];
+    simulateTrip(v.id, startPos, endPos);
   };
 
   return (
@@ -346,9 +385,20 @@ const DeliveryTab = ({ vehicles, orders, onAssign, onFree, onAdd }) => {
         </button>
       </form>
 
+      {/* Live-tracking tip */}
+      <div style={{
+        background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.25)",
+        borderRadius: 10, padding: "10px 14px", marginBottom: "1rem",
+        fontSize: 13, color: "#93c5fd", display: "flex", alignItems: "flex-start", gap: 8,
+      }}>
+        <span style={{ fontSize: 16 }}>💡</span>
+        <span>For live tracking: assign a driver, then click <strong>🚗 Simulate Trip</strong> — the truck marker will move in real-time on the customer's tracking map.</span>
+      </div>
+
       <div className="vehicles-grid">
         {vehicles.map(v => {
           const assignedOrder = orders.find(o => o.id === v.assignedOrderId);
+          const isSimulating  = simulatingId === v.id;
           return (
             <div key={v.id} className="vehicle-card">
               <div className="vehicle-card-header">
@@ -377,12 +427,29 @@ const DeliveryTab = ({ vehicles, orders, onAssign, onFree, onAdd }) => {
               ) : (
                 <div className="vehicle-busy-info" style={{ marginTop: "0.75rem" }}>
                   <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-                    Delivering: #{v.assignedOrderId?.slice(-6)} {assignedOrder ? `· ${assignedOrder.bunkName}` : ""}
+                    Delivering: #{v.assignedOrderId?.slice(-6)}{assignedOrder ? ` · ${assignedOrder.bunkName}` : ""}
                   </p>
-                  <button className="btn-danger small" style={{ marginTop: 6 }}
-                    onClick={() => onFree(v.id, v.assignedOrderId)}>
-                    ✅ Mark Delivered
-                  </button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                    {/* Simulate live movement */}
+                    <button
+                      className="btn-primary small"
+                      style={{
+                        background: isSimulating ? "#1d4ed8" : "#2563eb",
+                        fontSize: 12,
+                      }}
+                      disabled={isSimulating || simulatingId !== null}
+                      onClick={() => handleSimulate(v)}
+                    >
+                      {isSimulating ? (
+                        <><span className="spinner-ring small" style={{ marginRight: 4 }} />Simulating…</>
+                      ) : "🚗 Simulate Trip"}
+                    </button>
+                    <button className="btn-danger small"
+                      onClick={() => onFree(v.id, v.assignedOrderId)}
+                      disabled={isSimulating}>
+                      ✅ Mark Delivered
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

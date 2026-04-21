@@ -216,6 +216,10 @@ const OrderFuelPage = () => {
         bunkId: selectedBunk.id,
         bunkName: selectedBunk.name,
         bunkLocation: selectedBunk.location,
+        // Store exact GPS delivery point so TrackingPage can pin the destination
+        deliveryLocation: userLocation
+          ? { lat: userLocation.lat, lng: userLocation.lng }
+          : null,
         fuelType,
         quantity: qty,
         totalPrice: total,

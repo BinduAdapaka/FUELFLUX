@@ -122,8 +122,10 @@ const TrackingPage = () => {
   }, [order?.vehicleId]);
 
   // ── Stable memoised coordinate arrays ────────────────────────────────────
-  // Primitive seeds keep useMemo stable: only recompute when the actual
-  // lat/lng values change, NOT on every render (which caused infinite OSRM calls).
+  // Priority for delivery destination:
+  //   1. order.deliveryLocation  (GPS saved when order was placed — most accurate)
+  //   2. userLocation            (current GPS of the person viewing the page)
+  //   3. Estimated point ~2km offset from bunk
   const bunkLat = bunk?.location?.lat ?? DEFAULT_CENTER.lat;
   const bunkLng = bunk?.location?.lng ?? DEFAULT_CENTER.lng;
   const bunkPos = useMemo(() => [bunkLat, bunkLng], [bunkLat, bunkLng]);
@@ -135,11 +137,12 @@ const TrackingPage = () => {
     [vehLat, vehLng]
   );
 
-  const usrLat = userLocation?.[0] ?? null;
-  const usrLng = userLocation?.[1] ?? null;
+  // Delivery destination — use the GPS saved at order time if available
+  const dlvLat = order?.deliveryLocation?.lat ?? userLocation?.[0] ?? null;
+  const dlvLng = order?.deliveryLocation?.lng ?? userLocation?.[1] ?? null;
   const deliveryPos = useMemo(
-    () => (usrLat !== null ? [usrLat, usrLng] : [bunkLat + 0.018, bunkLng + 0.015]),
-    [usrLat, usrLng, bunkLat, bunkLng]
+    () => (dlvLat !== null ? [dlvLat, dlvLng] : [bunkLat + 0.018, bunkLng + 0.015]),
+    [dlvLat, dlvLng, bunkLat, bunkLng]
   );
 
   const routeOrigin = useMemo(
@@ -361,13 +364,21 @@ const TrackingPage = () => {
           {/* 📍 Delivery destination marker */}
           <Marker position={deliveryPos} icon={deliveryIcon}>
             <Popup>
-              <div style={{ textAlign: "center", fontWeight: 600, padding: "4px 6px" }}>
+              <div style={{ textAlign: "center", fontWeight: 600, padding: "4px 6px", maxWidth: 200 }}>
                 📍 Delivery Location
-                {!userLocation && (
+                {order.deliveryAddress && (
+                  <>
+                    <br />
+                    <span style={{ fontWeight: 400, fontSize: 11, color: "#a0a0a0", whiteSpace: "pre-wrap" }}>
+                      {order.deliveryAddress}
+                    </span>
+                  </>
+                )}
+                {!order.deliveryLocation && !userLocation && (
                   <>
                     <br />
                     <span style={{ fontWeight: 400, fontSize: 11, color: "#f59e0b" }}>
-                      ⚠ Enable location for exact pin
+                      ⚠ Approx. location shown
                     </span>
                   </>
                 )}
