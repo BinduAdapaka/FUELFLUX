@@ -10,7 +10,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
-// ⚠️  Replace with your actual Razorpay Key ID from https://dashboard.razorpay.com/
+
 const RAZORPAY_KEY_ID = "rzp_test_SfjfcIYZtkVBBi";
 
 const loadRazorpay = () =>
